@@ -10,3 +10,5 @@ class Action(Enum):
     MOVE_LEFT = 3
     RESET = 4
     EXIT = 5
+    def __eq__(self, other):
+        return self.__class__ is other.__class__ and other.value == self.value
