@@ -16,7 +16,7 @@ class Level:
         # TODO: Handle edge cases like non-existing file, file deleted mid read, forbidden access etc.
         with open(self.filepath, 'r', encoding="utf-8") as f:
             for row in f.read().splitlines():
-                preload.append(list(row))
+                preload.append(row)
                 cols = cols if cols >= len(row) else len(row)
         rows = len(preload)
         self.matrix = np.zeros((rows,cols),dtype=np.uint8)
@@ -31,8 +31,6 @@ class Level:
                 # .: dest
                 # P: Player on dest
                 # B: Box on dest
-                
-
 
     def __init__(self, filePath):
         self.filepath = filePath
