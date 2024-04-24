@@ -1,7 +1,6 @@
 """Class that represents an opened level the user is currently playing"""
 
 import numpy as np
-import pygame as pg
 
 import Constants as C
 from GameStatus import GameStatus
@@ -11,14 +10,9 @@ from Action import Action
 class Level:
     """Class that represents an opened level the user is currently playing"""
 
-    def is_end(self, gamestatus = None):
+    def is_win(self, gamestatus: GameStatus = None):
         """Check that gamestatus is winning"""
-        # todo: check that every box in gamestatus are on dests
-        if (gamestatus is None):
-            # check instance gamestatus
-            return True
-        # check received gamestatus
-        return False
+        return self.gamestatus.boxPos == self.dests if gamestatus is None else gamestatus.boxPos == self.dests
 
     def bfs(self):
         """Breadth first search that finds the optimal count of moves to solve level"""
@@ -27,7 +21,7 @@ class Level:
         queue = [self.gamestatus.copy()]
         while queue:
             visiting = queue.pop(0)
-            if self.is_end(visiting):
+            if self.is_win(visiting):
                 return visited[visiting]
             for action in [Action.MOVE_UP, Action.MOVE_RIGHT, Action.MOVE_DOWN, Action.MOVE_LEFT]:
                 toVisit = visiting.handle_action(action, self.matrix)
@@ -49,11 +43,10 @@ class Level:
         self.matrix = np.zeros((rows,cols),dtype=np.uint8)
 
         playerCount = 0
-        boxCount = 0
-        destCount = 0
 
         playerPos = np.zeros((2), np.int8)
         boxPos = set()
+        destsTmp = set()
 
         for row in range(rows):
             for col in range(cols):
@@ -64,29 +57,28 @@ class Level:
                     self.matrix[row][col] = C.WALL
                 elif currPos == '.':
                     self.matrix[row][col] = C.DESTINATION
-                    destCount += 1
+                    destsTmp.add((row, col))
                 elif currPos == '@':
                     playerPos = np.array([row, col], np.int8)
                     playerCount += 1
                 elif currPos == 'P':
                     self.matrix[row][col] = C.DESTINATION
-                    destCount += 1
+                    destsTmp.add((row, col))
                     playerPos = np.array([row, col], np.int8)
                     playerCount += 1
                 elif currPos == '$':
-                    boxPos.add(np.array([row, col], np.int8))
-                    boxCount += 1
+                    boxPos.add((row, col))
                 elif currPos == 'B':
-                    boxPos.add(np.array([row, col], np.int8))
-                    boxCount += 1
+                    boxPos.add((row, col))
                     self.matrix[row][col] = C.DESTINATION
-                    destCount += 1
+                    destsTmp.add((row, col))
                 else:
                     raise ValueError("Invalid character loaded from file")
 
-        if (playerCount != 1 or boxCount != destCount):
+        if (playerCount != 1 or len(boxPos) != len(destsTmp)):
             raise ValueError("Level has incorrect count of objects")
         self.gamestatus = GameStatus(playerPos, boxPos)
+        self.dests = frozenset(destsTmp)
 
         self.optimalMoves = self.bfs()
         if (self.optimalMoves == -1):
@@ -95,6 +87,7 @@ class Level:
     def __init__(self, filePath):
         self.filepath = filePath
         self.matrix = np.zeros((0,0), dtype=np.uint8)
+        self.dests = frozenset()
         self.gamestatus = GameStatus(np.zeros((2), np.int8), set())
         self.moves = 0
         self.optimalMoves = -1
