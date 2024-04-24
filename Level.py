@@ -3,6 +3,8 @@
 import numpy as np
 import pygame as pg
 
+import Constants as C
+from GameStatus import GameStatus
 from Action import Action
 
 
@@ -21,20 +23,48 @@ class Level:
         rows = len(preload)
         self.matrix = np.zeros((rows,cols),dtype=np.uint8)
 
+        playerCount = 0
+        boxCount = 0
+        destCount = 0
+
+        playerPos = np.zeros((2), np.int8)
+        boxPos = set()
+
         for row in range(rows):
             for col in range(cols):
                 currPos = ' ' if len(preload[row]) <= col else preload[row][col]
-                # All possible things
-                # #: wall
-                # @: player
-                # $: box
-                # .: dest
-                # P: Player on dest
-                # B: Box on dest
+                if currPos == ' ':
+                    self.matrix[row][col] = C.NOTHING
+                elif currPos == '#':
+                    self.matrix[row][col] = C.WALL
+                elif currPos == '.':
+                    self.matrix[row][col] = C.DESTINATION
+                    destCount += 1
+                elif currPos == '@':
+                    playerPos = np.array([row, col], np.int8)
+                    playerCount += 1
+                elif currPos == 'P':
+                    self.matrix[row][col] = C.DESTINATION
+                    destCount += 1
+                    playerPos = np.array([row, col], np.int8)
+                    playerCount += 1
+                elif currPos == '$':
+                    boxPos.add(np.array([row, col], np.int8))
+                    boxCount += 1
+                elif currPos == 'B':
+                    boxPos.add(np.array([row, col], np.int8))
+                    boxCount += 1
+                    self.matrix[row][col] = C.DESTINATION
+                    destCount += 1
+                else:
+                    raise ValueError("Invalid character loaded from file")
+
+        if (playerCount != 1 or boxCount != destCount):
+            raise ValueError("Level has incorrect count of objects")
+        self.gamestatus = GameStatus(playerPos, boxPos)
 
     def __init__(self, filePath):
         self.filepath = filePath
         self.matrix = np.zeros((0,0), dtype=np.uint8)
-        self.playerPosition = None
-        self.boxPositions = []
+        self.gamestatus = GameStatus(np.zeros((2), np.int8), set())
         self.reload()
