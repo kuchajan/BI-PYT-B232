@@ -9,7 +9,7 @@ class GameStatus:
     """Class that represents the current game status, such as the player position and positions of boxes"""
     def __init__(self, playerPos: np.array, boxPos: set):
         self.playerPos = playerPos
-        self.boxPos = boxPos.copy()
+        self.boxPos = frozenset(boxPos)
 
     def copy(self):
         """Creates a copy of the instance"""
@@ -38,16 +38,25 @@ class GameStatus:
         if matrix[newpos[0]][newpos[1]] == C.WALL: # attempted to move into a wall
             return self.copy()
 
-        if newpos not in self.boxPos:
+        if tuple(newpos) not in self.boxPos:
             return GameStatus(newpos, self.boxPos)
 
         # there's a box
         newSingleBoxPos = newpos + movevector
-        if matrix[newSingleBoxPos[0]][newSingleBoxPos[1]] == C.WALL or newSingleBoxPos in self.boxPos:
+        if matrix[newSingleBoxPos[0]][newSingleBoxPos[1]] == C.WALL or tuple(newSingleBoxPos) in self.boxPos:
             # moving box into wall or into box
             return self.copy()
 
-        newBoxPos = self.boxPos.copy()
-        newBoxPos.remove(newpos)
-        newBoxPos.add(newSingleBoxPos)
+        newBoxPos = set(self.boxPos)
+        newBoxPos.remove(tuple(newpos))
+        newBoxPos.add(tuple(newSingleBoxPos))
         return GameStatus(newpos, newBoxPos)
+    
+    def __hash__(self) -> int:
+        return hash((tuple(self.playerPos), self.boxPos))
+
+    def __eq__(self, other: object) -> bool:
+        return isinstance(other, GameStatus) and np.array_equal(self.playerPos, other.playerPos) and self.boxPos == other.boxPos
+
+    def __ne__(self, other: object) -> bool:
+        return not self == other
