@@ -17,8 +17,8 @@ class Level:
     def bfs(self):
         """Breadth first search that finds the optimal count of moves to solve level"""
         visited = {}
-        visited[self.gamestatus.copy()] = 0
-        queue = [self.gamestatus.copy()]
+        visited[self.gamestatus] = 0
+        queue = [self.gamestatus]
         while queue:
             visiting = queue.pop(0)
             if self.is_win(visiting):
@@ -51,28 +51,30 @@ class Level:
         for row in range(rows):
             for col in range(cols):
                 currPos = ' ' if len(preload[row]) <= col else preload[row][col]
+                # nothing
                 if currPos == ' ':
-                    self.matrix[row][col] = C.NOTHING
-                elif currPos == '#':
-                    self.matrix[row][col] = C.WALL
-                elif currPos == '.':
-                    self.matrix[row][col] = C.DESTINATION
-                    destsTmp.add((row, col))
-                elif currPos == '@':
+                    self.matrix[row][col] = const.NOTHING
+                    continue
+                # wall
+                if currPos == '#':
+                    self.matrix[row][col] = const.WALL
+                    continue
+                loadedSomething = False
+                # Player
+                if currPos in "@P":
+                    loadedSomething = True
                     playerPos = np.array([row, col], np.int8)
                     playerCount += 1
-                elif currPos == 'P':
-                    self.matrix[row][col] = C.DESTINATION
-                    destsTmp.add((row, col))
-                    playerPos = np.array([row, col], np.int8)
-                    playerCount += 1
-                elif currPos == '$':
+                # Box
+                if currPos in "$B":
+                    loadedSomething = True
                     boxPos.add((row, col))
-                elif currPos == 'B':
-                    boxPos.add((row, col))
-                    self.matrix[row][col] = C.DESTINATION
+                # Dest
+                if currPos in ".PB":
+                    loadedSomething = True
+                    self.matrix[row][col] = const.DESTINATION
                     destsTmp.add((row, col))
-                else:
+                if not loadedSomething:
                     raise ValueError("Invalid character loaded from file")
 
         if (playerCount != 1 or len(boxPos) != len(destsTmp)):
