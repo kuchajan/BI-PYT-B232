@@ -11,4 +11,4 @@ class Action(Enum):
     RESET = 4
     EXIT = 5
     def __eq__(self, other):
-        return self.__class__ is other.__class__ and other.value == self.value
+        return isinstance(other, Action) and other.value == self.value
