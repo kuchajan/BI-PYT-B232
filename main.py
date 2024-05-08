@@ -16,20 +16,23 @@ from action import Action
 
 
 def get_action():
-    """Gets the action from the key being pressed"""
-    pressed = pygame.key.get_pressed()
-    if pressed[K_UP]:
-        return Action.MOVE_UP
-    if pressed[K_RIGHT]:
-        return Action.MOVE_RIGHT
-    if pressed[K_DOWN]:
-        return Action.MOVE_DOWN
-    if pressed[K_LEFT]:
-        return Action.MOVE_LEFT
-    if pressed[K_r]:
-        return Action.RESET
-    if pressed[K_ESCAPE]:
-        return Action.EXIT
+    """Gets the action from pygame events"""
+    for event in pygame.event.get():
+        if event.type == QUIT:
+            return Action.EXIT
+        if event.type == KEYDOWN:
+            if event.key == K_ESCAPE:
+                return Action.EXIT
+            if event.key == K_r:
+                return Action.RESET
+            if event.key == K_UP:
+                return Action.MOVE_UP
+            if event.key == K_RIGHT:
+                return Action.MOVE_RIGHT
+            if event.key == K_DOWN:
+                return Action.MOVE_DOWN
+            if event.key == K_LEFT:
+                return Action.MOVE_LEFT
     return Action.NOTHING
 
 
@@ -67,20 +70,21 @@ def render_level(to_render: Level, surface: Surface):
     # draw player
     surface.blit(player,
                  (to_render.game_status.player_pos[0] * img_size, to_render.game_status.player_pos[1] * img_size))
-    print(to_render.game_status.player_pos)
     pygame.display.update()
     return
 
 
-def play_level(filepath: str, display_surf: Surface):
+def play_level(filepath: str):
     level = Level(filepath)
+    img_size = pygame.image.load("assets/nothing.png").get_width()
+    screen_width = img_size * level.matrix.shape[0]
+    screen_height = img_size * level.matrix.shape[1]
+    display_surf = pygame.display.set_mode((screen_width, screen_height))
+    pygame.display.set_caption("Sokoban: " + filepath)
+
     running = True
     while running:
         render_level(level, display_surf)
-        for event in pygame.event.get():
-            if event.type == QUIT:
-                running = False
-                continue
         action = get_action()
         if action == Action.NOTHING:
             continue
@@ -96,13 +100,7 @@ def play_level(filepath: str, display_surf: Surface):
 def main():
     """Entry function"""
     pygame.init()
-    screen_width = 500
-    screen_height = 500
-    display_surf = pygame.display.set_mode((screen_width, screen_height))
-    pygame.display.set_caption("Sokoban")
-
-    play_level("levels/level1.lvl", display_surf)
-
+    play_level("levels/level1.lvl")
     pygame.quit()
 
 
