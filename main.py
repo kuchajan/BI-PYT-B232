@@ -94,6 +94,20 @@ def render_level(to_render: Level, display_surf: Surface):
     return
 
 
+def render_win(to_render: Level, display_surf: Surface):
+    """Renders a win screen"""
+    display_surf.fill((0, 0, 0))
+    congrats_surf = get_text_surface("Congratulations! Your score:", 30)
+    congrats_pos = ((display_surf.get_width() - congrats_surf.get_width()) // 2,
+                    ((display_surf.get_height() - congrats_surf.get_height()) // 2) - 30)
+    score_surf = get_text_surface(str(to_render.moves) + "/" + str(to_render.optimal_moves), 50)
+    score_pos = ((display_surf.get_width() - score_surf.get_width()) // 2,
+                 ((display_surf.get_height() - score_surf.get_height()) // 2) + 30)
+    display_surf.blit(congrats_surf, congrats_pos)
+    display_surf.blit(score_surf, score_pos)
+    pygame.display.update()
+
+
 def play_level(filepath: str):
     """Lets player play a level"""
     level = Level(filepath)
@@ -118,6 +132,9 @@ def play_level(filepath: str):
                 running = False
             continue
         raise ValueError("Unknown value of action")
+    if level.is_win():
+        render_win(level, display_surf)
+        pygame.time.delay(5000)
 
 
 def choice_menu(menu_name: str, choices: list) -> int:

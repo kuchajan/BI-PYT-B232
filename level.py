@@ -90,10 +90,14 @@ class Level:
     def handle_action(self, action: Action):
         """Handles an action from the user"""
         if action == Action.RESET:
+            self.moves = 0
             self.reload()
             return
         if action in [Action.MOVE_UP, Action.MOVE_RIGHT, Action.MOVE_DOWN, Action.MOVE_LEFT]:
-            self.game_status = self.game_status.handle_action(action, self.matrix)
+            new_game_status = self.game_status.handle_action(action, self.matrix)
+            if new_game_status != self.game_status:
+                self.moves += 1
+                self.game_status = new_game_status
             return
         if action == Action.NOTHING:
             return
@@ -106,6 +110,7 @@ class Level:
         self.dests = dests.copy()
         self.game_status = game_status.copy()
         self.optimal_moves = -1
+        self.moves = 0
         if filepath != "":
             self.reload()
         else:
