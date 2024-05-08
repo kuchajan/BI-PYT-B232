@@ -41,7 +41,7 @@ class Level:
                 preload.append(row)
                 cols = cols if cols >= len(row) else len(row)
         rows = len(preload)
-        self.matrix = np.zeros((rows, cols), dtype=np.uint8)
+        self.matrix = np.zeros((cols, rows), dtype=np.uint8)
 
         player_cnt = 0
 
@@ -54,27 +54,27 @@ class Level:
                 curr_pos = ' ' if len(preload[row]) <= col else preload[row][col]
                 # nothing
                 if curr_pos == ' ':
-                    self.matrix[row][col] = const.NOTHING
+                    self.matrix[col][row] = const.NOTHING
                     continue
                 # wall
                 if curr_pos == '#':
-                    self.matrix[row][col] = const.WALL
+                    self.matrix[col][row] = const.WALL
                     continue
                 load_valid = False
                 # Player
                 if curr_pos in "@P":
                     load_valid = True
-                    player_pos = np.array([row, col], np.int8)
+                    player_pos = np.array([col, row], np.int8)
                     player_cnt += 1
                 # Box
                 if curr_pos in "$B":
                     load_valid = True
-                    box_pos.add((row, col))
+                    box_pos.add((col, row))
                 # Dest
                 if curr_pos in ".PB":
                     load_valid = True
-                    self.matrix[row][col] = const.DESTINATION
-                    dests_tmp.add((row, col))
+                    self.matrix[col][row] = const.DESTINATION
+                    dests_tmp.add((col, row))
                 if not load_valid:
                     raise ValueError("Invalid character loaded from file")
 
