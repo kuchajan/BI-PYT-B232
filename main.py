@@ -1,8 +1,11 @@
 """Game entrypoint"""
 
+import numpy as np
 import pygame
 from pygame.surface import Surface
 from pygame.locals import *
+import tkinter.simpledialog
+import tkinter.messagebox
 
 from pathlib import Path
 
@@ -56,7 +59,7 @@ def render_choice_menu(menu_name: str, choices: list, current_choice: int, displ
     pygame.display.update()
 
 
-def render_level(to_render: Level, display_surf: Surface):
+def render_level(to_render: Level, display_surf: Surface, selection_pos: np.array = np.array([-1])):
     """Renders a level"""
     display_surf.fill((0, 0, 0))
 
@@ -67,6 +70,7 @@ def render_level(to_render: Level, display_surf: Surface):
     box = pygame.image.load("assets/box.png").convert_alpha()
     box_on_dest = pygame.image.load("assets/box_on_dest.png").convert_alpha()
     player = pygame.image.load("assets/player.png").convert_alpha()
+    selection = pygame.image.load("assets/selection.png").convert_alpha()
 
     img_size = wall.get_width()  # images should be square
 
@@ -83,38 +87,28 @@ def render_level(to_render: Level, display_surf: Surface):
                 raise ValueError("Unknown value read from level matrix")
     # draw boxes
     for boxPos in to_render.game_status.box_pos:
-        if boxPos in to_render.dests:
+        if to_render.matrix[boxPos] == constants.DESTINATION:
             display_surf.blit(box_on_dest, (boxPos[0] * img_size, boxPos[1] * img_size))
         else:
             display_surf.blit(box, (boxPos[0] * img_size, boxPos[1] * img_size))
     # draw player
     display_surf.blit(player,
                       (to_render.game_status.player_pos[0] * img_size, to_render.game_status.player_pos[1] * img_size))
+    if selection_pos[0] != -1:
+        display_surf.blit(selection, (selection_pos[0] * img_size, selection_pos[1] * img_size))
     pygame.display.update()
     return
 
 
-def render_win(to_render: Level, display_surf: Surface):
-    """Renders a win screen"""
-    display_surf.fill((0, 0, 0))
-    congrats_surf = get_text_surface("Congratulations! Your score:", 30)
-    congrats_pos = ((display_surf.get_width() - congrats_surf.get_width()) // 2,
-                    ((display_surf.get_height() - congrats_surf.get_height()) // 2) - 30)
-    score_surf = get_text_surface(str(to_render.moves) + "/" + str(to_render.optimal_moves), 50)
-    score_pos = ((display_surf.get_width() - score_surf.get_width()) // 2,
-                 ((display_surf.get_height() - score_surf.get_height()) // 2) + 30)
-    display_surf.blit(congrats_surf, congrats_pos)
-    display_surf.blit(score_surf, score_pos)
-    pygame.display.update()
+def get_new_display_surf(shape: (int, int)):
+    img_size = pygame.image.load("assets/nothing.png").get_width()
+    return pygame.display.set_mode((img_size * shape[0], img_size * shape[1]))
 
 
 def play_level(filepath: str):
     """Lets player play a level"""
-    level = Level(filepath)
-    img_size = pygame.image.load("assets/nothing.png").get_width()
-    screen_width = img_size * level.matrix.shape[0]
-    screen_height = img_size * level.matrix.shape[1]
-    display_surf = pygame.display.set_mode((screen_width, screen_height))
+    level = Level(True, filepath)
+    display_surf = get_new_display_surf(level.matrix.shape)
     pygame.display.set_caption("Sokoban - " + filepath)
 
     running = True
@@ -132,9 +126,122 @@ def play_level(filepath: str):
                 running = False
             continue
         raise ValueError("Unknown value of action")
+    pygame.display.quit()
     if level.is_win():
-        render_win(level, display_surf)
-        pygame.time.delay(5000)
+        tkinter.messagebox.showinfo("Congratulations",
+                                    "You won!\nYour score: " + str(level.moves) + "\nOptimal moves: " + str(
+                                        level.optimal_moves))
+
+
+def ask_new_size() -> (int, int):
+    new_width = 0
+    while new_width <= 0 or new_width >= 20:
+        new_width = tkinter.simpledialog.askinteger("Resizing dialog", "Please enter new width:")
+        if new_width is None:
+            return -1, -1
+
+    new_height = 0
+    while new_height <= 0 or new_height >= 20:
+        new_height = tkinter.simpledialog.askinteger("Resizing dialog", "Please enter new height:")
+        if new_height is None:
+            return -1, -1
+    return new_width, new_height
+
+
+def resize_matrix(matrix: np.ndarray, new_size: (int, int)) -> np.ndarray:
+    delta_width = new_size[0] - matrix.shape[0]
+    delta_height = new_size[1] - matrix.shape[1]
+    if delta_width > 0:
+        matrix = np.pad(matrix, ((0, delta_width), (0, 0)), mode='constant', constant_values=0)
+    elif delta_width < 0:
+        matrix = matrix[:delta_width, :].copy()
+    if delta_height > 0:
+        matrix = np.pad(matrix, ((0, 0), (0, delta_height)), mode='constant', constant_values=0)
+    elif delta_height < 0:
+        matrix = matrix[:, :delta_height].copy()
+    return matrix
+
+
+def edit_level(level: Level):
+    display_surf = get_new_display_surf(level.matrix.shape)
+    pygame.display.set_caption("Sokoban - Editing a level")
+
+    selection_pos = np.zeros(2, np.int8)
+    running = True
+    while running:
+        render_level(level, display_surf, selection_pos)
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                running = False
+                break
+            if event.type == pygame.KEYDOWN:
+                if event.key == pygame.K_ESCAPE:
+                    running = False
+                    break
+                if event.key == pygame.K_LEFT:
+                    if selection_pos[0] > 0:
+                        selection_pos[0] -= 1
+                    continue
+                if event.key == pygame.K_RIGHT:
+                    if selection_pos[0] < level.matrix.shape[0] - 1:
+                        selection_pos[0] += 1
+                    continue
+                if event.key == pygame.K_UP:
+                    if selection_pos[1] > 0:
+                        selection_pos[1] -= 1
+                    continue
+                if event.key == pygame.K_DOWN:
+                    if selection_pos[1] < level.matrix.shape[1] - 1:
+                        selection_pos[1] += 1
+                    continue
+                if event.key == pygame.K_r:
+                    new_size = ask_new_size()
+                    if new_size[0] == -1:
+                        continue
+                    level.matrix = resize_matrix(level.matrix.copy(), new_size)
+                    display_surf = get_new_display_surf(level.matrix.shape)
+                    continue
+                pos = tuple(selection_pos)
+                if event.key == pygame.K_w:
+                    if np.array_equal(selection_pos, level.game_status.player_pos):
+                        continue
+                    if pos in level.game_status.box_pos:
+                        continue
+                    level.matrix[pos] = constants.WALL
+                    continue
+                if event.key == pygame.K_d:
+                    level.matrix[pos] = constants.DESTINATION
+                    continue
+                if event.key == pygame.K_n:
+                    level.matrix[pos] = constants.NOTHING
+                    continue
+                if event.key == pygame.K_b:
+                    if level.matrix[pos] == constants.WALL:
+                        continue
+                    if np.array_equal(selection_pos, level.game_status.player_pos):
+                        continue
+                    new_box_pos = set(level.game_status.box_pos)
+                    if pos in level.game_status.box_pos:
+                        new_box_pos.remove(pos)
+                    else:
+                        new_box_pos.add(pos)
+                    level.game_status.box_pos = frozenset(new_box_pos)
+                    continue
+                if event.key == pygame.K_p:
+                    if level.matrix[pos] == constants.WALL:
+                        continue
+                    if pos in level.game_status.box_pos:
+                        continue
+                    level.game_status.player_pos = selection_pos.copy()
+                    continue
+
+    # this can be done a lot better
+    while level.filepath == "":
+        new_path = tkinter.simpledialog.askstring("Sokoban dialogue", "Please enter a name for the level")
+        if new_path is None:
+            return
+        level.filepath = "./levels/" + new_path + ".lvl"
+    level.save()
 
 
 def choice_menu(menu_name: str, choices: list) -> int:
@@ -178,9 +285,21 @@ def choose_level_play():
     choices = [f.stem for f in Path("./levels").iterdir() if f.is_file() and f.name.endswith(".lvl")]
     choices.insert(0, "Go back")
     choice = choice_menu("Choose level", choices)
+    if choice > 0:
+        play_level("./levels/" + choices[choice] + ".lvl")
+
+
+def choose_level_edit():
+    choices = [f.stem for f in Path("./levels").iterdir() if f.is_file() and f.name.endswith(".lvl")]
+    choices.insert(0, "Go back")
+    choices.insert(1, "Create new")
+    choice = choice_menu("Choose level", choices)
     if choice <= 0:
         return
-    play_level("./levels/" + choices[choice] + ".lvl")
+    if choice == 1:
+        edit_level(Level(False))
+    else:
+        edit_level(Level(False, "./levels/" + choices[choice] + ".lvl"))
 
 
 def main():
@@ -195,7 +314,7 @@ def main():
             choose_level_play()
             continue
         if choice == 1:
-            # choose_level_edit()
+            choose_level_edit()
             continue
         running = False
     pygame.quit()

@@ -9,13 +9,24 @@ from action import Action
 
 class Level:
     """Class that represents an opened level the user is currently playing"""
+    def get_dests(self):
+        dests = set()
+        for row in range(self.matrix.shape[1]):
+            for col in range(self.matrix.shape[0]):
+                if self.matrix[col][row] == const.DESTINATION:
+                    dests.add((col, row))
+        return frozenset(dests)
 
     def is_win(self, game_status: GameStatus = None):
         """Check that game_status is winning"""
-        return self.game_status.box_pos == self.dests if game_status is None else game_status.box_pos == self.dests
+        if game_status is None:
+            game_status = self.game_status
+        return game_status.box_pos == self.get_dests()
 
     def bfs(self):
         """Breadth first search that finds the optimal count of moves to solve level"""
+        if len(self.game_status.box_pos) != len(self.get_dests()):
+            return -1
         visited = {self.game_status: 0}
         queue = [self.game_status]
         while queue:
@@ -29,8 +40,8 @@ class Level:
                     visited[to_visit] = visited[visiting] + 1
         return -1
 
-    def reload(self):
-        """Reloads a level from filepath"""
+    def load(self):
+        """Loads a level from filepath"""
         if not isinstance(self.filepath, str) or len(self.filepath) == 0:
             raise ValueError("Cannot load level with given filepath")
         preload = []
@@ -43,11 +54,8 @@ class Level:
         rows = len(preload)
         self.matrix = np.zeros((cols, rows), dtype=np.uint8)
 
-        player_cnt = 0
-
         player_pos = np.zeros(2, np.int8)
         box_pos = set()
-        dests_tmp = set()
 
         for row in range(rows):
             for col in range(cols):
@@ -65,7 +73,6 @@ class Level:
                 if curr_pos in "@P":
                     load_valid = True
                     player_pos = np.array([col, row], np.int8)
-                    player_cnt += 1
                 # Box
                 if curr_pos in "$B":
                     load_valid = True
@@ -74,18 +81,53 @@ class Level:
                 if curr_pos in ".PB":
                     load_valid = True
                     self.matrix[col][row] = const.DESTINATION
-                    dests_tmp.add((col, row))
                 if not load_valid:
                     raise ValueError("Invalid character loaded from file")
-
-        if player_cnt != 1 or len(box_pos) != len(dests_tmp):
-            raise ValueError("Level has incorrect count of objects")
         self.game_status = GameStatus(player_pos, box_pos)
-        self.dests = frozenset(dests_tmp)
 
-        self.optimal_moves = self.bfs()
+    def get_char(self, col: int, row: int) -> str:
+        has_player = np.array_equal(self.game_status.player_pos, np.array([col, row], np.int8))
+        has_box = ((col, row) in self.game_status.box_pos)
+        if self.matrix[col][row] == const.WALL:
+            if has_box or has_player:
+                raise ValueError("Player nor box cannot be inside wall")
+            return "#"
+        if has_player and has_box:
+            raise ValueError("Player cannot be inside box")
+        if self.matrix[col][row] == const.NOTHING:
+            if has_player:
+                return "@"
+            if has_box:
+                return "$"
+            return " "
+        if self.matrix[col][row] == const.DESTINATION:
+            if has_player:
+                return "P"
+            if has_box:
+                return "B"
+            return "."
+        raise ValueError("Unknown value in level matrix")
+
+    def save(self):
+        with open(self.filepath, 'w', encoding="utf-8") as file:
+            for row in range(self.matrix.shape[1]):
+                str_to_write = ""
+                for col in range(self.matrix.shape[0]):
+                    str_to_write += self.get_char(col, row)
+                file.write(str_to_write + "\n")
+
+    def check_level(self):
+        if len(self.game_status.box_pos) != len(self.get_dests()):
+            raise ValueError("Level has incorrect count of objects")
         if self.optimal_moves == -1:
-            raise ValueError("Level is not solveable")
+            raise ValueError("Level is not solvable")
+        
+
+    def reload(self):
+        """Reloads a level to play"""
+        self.load()
+        self.optimal_moves = self.bfs()
+        self.check_level()
 
     def handle_action(self, action: Action):
         """Handles an action from the user"""
@@ -103,17 +145,15 @@ class Level:
             return
         raise ValueError("Invalid action passed to level")
 
-    def __init__(self, filepath: str = "", matrix=np.zeros((0, 0), dtype=np.uint8), dests=frozenset(),
+    def __init__(self, play: bool, filepath: str = "", matrix=np.zeros((10, 10), dtype=np.uint8),
                  game_status=GameStatus(np.zeros(2, np.int8), set())):
         self.filepath = filepath
-        self.matrix = matrix
-        self.dests = dests.copy()
-        self.game_status = game_status.copy()
-        self.optimal_moves = -1
-        self.moves = 0
-        if filepath != "":
-            self.reload()
+        if self.filepath == "":
+            self.matrix = matrix
+            self.game_status = game_status.copy()
         else:
-            self.optimal_moves = self.bfs()
-            if self.optimal_moves == -1:
-                raise ValueError("Level is not solvable")
+            self.load()
+        self.moves = 0
+        self.optimal_moves = self.bfs() if play else -1
+        if play:
+            self.check_level()
