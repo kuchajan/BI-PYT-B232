@@ -7,6 +7,7 @@ from action import Action
 
 
 def check_position(position: np.array, matrix: np.array) -> bool:
+    """Function to check if position is valid depending on the matrix"""
     if position[0] < 0 or position[0] >= matrix.shape[0] or position[1] < 0 or position[1] >= matrix.shape[1]:
         return False
     return matrix[position[0], position[1]] != const.WALL

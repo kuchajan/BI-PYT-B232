@@ -1,13 +1,13 @@
 """Game entrypoint"""
 
+import tkinter.simpledialog
+import tkinter.messagebox
+from pathlib import Path
+
 import numpy as np
 import pygame
 from pygame.surface import Surface
 from pygame.locals import *
-import tkinter.simpledialog
-import tkinter.messagebox
-
-from pathlib import Path
 
 import constants
 from level import Level
@@ -22,7 +22,7 @@ def get_action() -> Action:
         if event.type == KEYDOWN:
             if event.key == K_ESCAPE:
                 return Action.EXIT
-            if event.key == K_RETURN or event.key == K_KP_ENTER:
+            if event.key in [K_RETURN, K_KP_ENTER]:
                 return Action.ENTER
             if event.key == K_r:
                 return Action.RESET
@@ -43,6 +43,7 @@ def get_text_surface(string: str, size: int):
 
 
 def render_choice_menu(menu_name: str, choices: list, current_choice: int, display_surf: Surface):
+    """Renders a choice menu"""
     display_surf.fill((0, 0, 0))
     name_surf = get_text_surface(menu_name, 50)
     name_surf_pos = ((display_surf.get_width() - name_surf.get_width()) // 2, 10)
@@ -97,10 +98,10 @@ def render_level(to_render: Level, display_surf: Surface, selection_pos: np.arra
     if selection_pos[0] != -1:
         display_surf.blit(selection, (selection_pos[0] * img_size, selection_pos[1] * img_size))
     pygame.display.update()
-    return
 
 
 def get_new_display_surf(shape: (int, int)):
+    """Returns a new surface large enough to render level"""
     img_size = pygame.image.load("assets/nothing.png").get_width()
     return pygame.display.set_mode((img_size * shape[0], img_size * shape[1]))
 
@@ -152,6 +153,7 @@ def play_level(filepath: str):
 
 
 def ask_new_size() -> (int, int):
+    """Asks the user for a new size for the level"""
     new_width = 0
     while new_width <= 0 or new_width >= 20:
         new_width = tkinter.simpledialog.askinteger("Resizing dialog", "Please enter new width:")
@@ -167,6 +169,7 @@ def ask_new_size() -> (int, int):
 
 
 def resize_matrix(matrix: np.ndarray, new_size: (int, int)) -> np.ndarray:
+    """Resizes the matrix to desired new size"""
     delta_width = new_size[0] - matrix.shape[0]
     delta_height = new_size[1] - matrix.shape[1]
     if delta_width > 0:
@@ -181,6 +184,7 @@ def resize_matrix(matrix: np.ndarray, new_size: (int, int)) -> np.ndarray:
 
 
 def edit_level(level: Level):
+    """Lets user edit a level"""
     display_surf = get_new_display_surf(level.matrix.shape)
     pygame.display.set_caption("Sokoban - Editing a level")
 
@@ -253,7 +257,6 @@ def edit_level(level: Level):
                     level.game_status.player_pos = selection_pos.copy()
                     continue
 
-    # this can be done a lot better
     while level.filepath == "":
         new_path = tkinter.simpledialog.askstring("Sokoban dialogue", "Please enter a name for the level")
         if new_path is None:
@@ -301,6 +304,7 @@ def choice_menu(menu_name: str, choices: list) -> int:
 
 
 def choose_level_play():
+    """Lets user choose a level to play or to go back"""
     choices = [f.stem for f in Path("./levels").iterdir() if f.is_file() and f.name.endswith(".lvl")]
     choices.insert(0, "Go back")
     choice = choice_menu("Choose level", choices)
@@ -309,6 +313,7 @@ def choose_level_play():
 
 
 def choose_level_edit():
+    """Lets user choose which level to edit or to create a new level or go back"""
     choices = [f.stem for f in Path("./levels").iterdir() if f.is_file() and f.name.endswith(".lvl")]
     choices.insert(0, "Go back")
     choices.insert(1, "Create new")

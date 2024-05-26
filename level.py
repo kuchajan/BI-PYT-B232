@@ -9,7 +9,9 @@ from action import Action
 
 class Level:
     """Class that represents an opened level the user is currently playing"""
+
     def get_dests(self):
+        """Gets the positions of destinations"""
         dests = set()
         for row in range(self.matrix.shape[1]):
             for col in range(self.matrix.shape[0]):
@@ -85,8 +87,9 @@ class Level:
         self.game_status = GameStatus(player_pos, box_pos)
 
     def get_char(self, col: int, row: int) -> str:
+        """Converts a position to a character to save"""
         has_player = np.array_equal(self.game_status.player_pos, np.array([col, row], np.int8))
-        has_box = ((col, row) in self.game_status.box_pos)
+        has_box = (col, row) in self.game_status.box_pos
         if self.matrix[col][row] == const.WALL:
             if has_box or has_player:
                 raise ValueError("Player nor box cannot be inside wall")
@@ -108,6 +111,7 @@ class Level:
         raise ValueError("Unknown value in level matrix")
 
     def save(self):
+        """Saves a level to a file"""
         with open(self.filepath, 'w', encoding="utf-8") as file:
             for row in range(self.matrix.shape[1]):
                 str_to_write = ""
@@ -116,6 +120,7 @@ class Level:
                 file.write(str_to_write + "\n")
 
     def check_level(self):
+        """Checks whether the level is playable"""
         if self.game_status.player_pos[0] < 0 or self.game_status.player_pos[1] < 0:
             raise ValueError("No player was loaded")
         if len(self.game_status.box_pos) != len(self.get_dests()):
@@ -123,7 +128,6 @@ class Level:
         self.optimal_moves = self.bfs()
         if self.optimal_moves == -1:
             raise ValueError("Level is not solvable")
-        
 
     def reload(self):
         """Reloads a level to play"""
