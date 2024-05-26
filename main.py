@@ -107,7 +107,15 @@ def get_new_display_surf(shape: (int, int)):
 
 def play_level(filepath: str):
     """Lets player play a level"""
-    level = Level(True, filepath)
+    level = None
+    try:
+        level = Level(True, filepath)
+    except ValueError as e:
+        tkinter.messagebox.showerror("Error", "Failed to load level: " + str(e))
+        return
+    except Exception as e:
+        tkinter.messagebox.showerror("Error", "An unexpected error occurred: " + str(e))
+        return
     display_surf = get_new_display_surf(level.matrix.shape)
     pygame.display.set_caption("Sokoban - " + filepath)
 
@@ -120,10 +128,20 @@ def play_level(filepath: str):
         if action == Action.EXIT:
             running = False
             continue
-        if action in [Action.MOVE_UP, Action.MOVE_RIGHT, Action.MOVE_DOWN, Action.MOVE_LEFT, Action.RESET]:
+        if action == Action.RESET:
+            try:
+                level.handle_action(action)
+            except ValueError as e:
+                tkinter.messagebox.showerror("Error", "Failed to reload level: " + str(e))
+                return
+            except Exception as e:
+                tkinter.messagebox.showerror("Error", "An unexpected error occurred: " + str(e))
+                return
+            running = not level.is_win()
+            continue
+        if action in [Action.MOVE_UP, Action.MOVE_RIGHT, Action.MOVE_DOWN, Action.MOVE_LEFT]:
             level.handle_action(action)
-            if level.is_win():
-                running = False
+            running = not level.is_win()
             continue
         raise ValueError("Unknown value of action")
     pygame.display.quit()
@@ -241,14 +259,15 @@ def edit_level(level: Level):
         if new_path is None:
             return
         level.filepath = "./levels/" + new_path + ".lvl"
-    level.save()
+    try:
+        level.save()
+    except Exception as e:
+        tkinter.messagebox.showerror("Error", "An unexpected exception occurred: " + str(e))
 
 
 def choice_menu(menu_name: str, choices: list) -> int:
     """Lets the player choose an option"""
-    screen_width = 500
-    screen_height = 500
-    display_surf = pygame.display.set_mode((screen_width, screen_height))
+    display_surf = pygame.display.set_mode((500, 500))
     pygame.display.set_caption("Sokoban")
 
     current_choice = 0
@@ -296,10 +315,14 @@ def choose_level_edit():
     choice = choice_menu("Choose level", choices)
     if choice <= 0:
         return
-    if choice == 1:
-        edit_level(Level(False))
-    else:
-        edit_level(Level(False, "./levels/" + choices[choice] + ".lvl"))
+    to_edit = Level(False)
+    if choice != 1:
+        try:
+            to_edit = Level(False, "./levels/" + choices[choice] + ".lvl")
+        except ValueError as e:
+            tkinter.messagebox.showerror("Error", "Failed to load level: " + str(e))
+            return
+    edit_level(to_edit)
 
 
 def main():

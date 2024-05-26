@@ -46,7 +46,6 @@ class Level:
             raise ValueError("Cannot load level with given filepath")
         preload = []
         cols = -1
-        # TODO: Handle edge cases like non-existing file, file deleted mid read, forbidden access etc.
         with open(self.filepath, 'r', encoding="utf-8") as file:
             for row in file.read().splitlines():
                 preload.append(row)
@@ -54,7 +53,7 @@ class Level:
         rows = len(preload)
         self.matrix = np.zeros((cols, rows), dtype=np.uint8)
 
-        player_pos = np.zeros(2, np.int8)
+        player_pos = np.array([-1, -1], np.int8)
         box_pos = set()
 
         for row in range(rows):
@@ -117,8 +116,11 @@ class Level:
                 file.write(str_to_write + "\n")
 
     def check_level(self):
+        if self.game_status.player_pos[0] < 0 or self.game_status.player_pos[1] < 0:
+            raise ValueError("No player was loaded")
         if len(self.game_status.box_pos) != len(self.get_dests()):
             raise ValueError("Level has incorrect count of objects")
+        self.optimal_moves = self.bfs()
         if self.optimal_moves == -1:
             raise ValueError("Level is not solvable")
         
@@ -126,7 +128,6 @@ class Level:
     def reload(self):
         """Reloads a level to play"""
         self.load()
-        self.optimal_moves = self.bfs()
         self.check_level()
 
     def handle_action(self, action: Action):
@@ -154,6 +155,6 @@ class Level:
         else:
             self.load()
         self.moves = 0
-        self.optimal_moves = self.bfs() if play else -1
+        self.optimal_moves = -1
         if play:
             self.check_level()
