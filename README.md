@@ -1,3 +1,9 @@
+# BI-PYT-B232
+
+This repository contains a semestral project for the course named Programming in Python at FIT CTU for the summer academic semester of 2023 - 2024. It is a Sokoban remake that also contains a custom level editor and a score calculator. Also included is a [report](./Sokoban___BI_PYT.pdf) for this project in czech.
+
+Below is the original README content in czech:
+
 # Sokoban
 
 Tento python program implementuje logickou retro video hru, kde hráč posouvá bedny v bludišti na vyznačená místa. Součástí implementace je i editor úrovní a nalezení efektivního řešení pro výpočet skóre (a tedy i splnitelnost úrovně).
